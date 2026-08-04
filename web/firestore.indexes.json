@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "comprobantes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "vendedor_uid", "order": "ASCENDING" },
+        { "fieldPath": "fecha_subida", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "comprobantes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha_subida", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "comprobantes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_ocr", "order": "ASCENDING" },
+        { "fieldPath": "fecha_subida", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

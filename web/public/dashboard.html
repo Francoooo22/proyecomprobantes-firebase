@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subir comprobante — Comprobantes</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="dashboard">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="logo small">Comprobantes</span>
+      <div class="topbar-right">
+        <span id="user-name" class="muted"></span>
+        <a href="admin.html" id="link-admin" hidden>Panel supervisor</a>
+        <button id="btn-logout" class="btn-link">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Subir comprobante</h2>
+
+      <form id="upload-form">
+        <label for="sucursal">Sucursal</label>
+        <select id="sucursal" name="sucursal" required></select>
+
+        <label for="tipo">Tipo de comprobante</label>
+        <select id="tipo" name="tipo" required>
+          <option value="transferencia">Transferencia</option>
+          <option value="factura">Factura</option>
+          <option value="recibo">Recibo</option>
+          <option value="otro">Otro</option>
+        </select>
+
+        <label for="file">Comprobante (foto o PDF)</label>
+        <input type="file" id="file" name="file" accept="image/*,.pdf" required>
+        <p class="muted small">Max 10MB — JPG, PNG o PDF</p>
+
+        <label for="nota">Nota (opcional)</label>
+        <input type="text" id="nota" name="nota" placeholder="Ej: pago proveedor turismo">
+
+        <button type="submit" id="btn-upload">Subir</button>
+        <div id="upload-progress" class="progress" hidden><div class="progress-bar" id="upload-progress-bar"></div></div>
+      </form>
+      <p id="upload-msg" class="success" hidden></p>
+      <p id="upload-error" class="error" hidden></p>
+    </section>
+
+    <section class="card">
+      <h2>Mis comprobantes</h2>
+      <div id="history-list" class="list">
+        <p class="muted">Cargando…</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/upload.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

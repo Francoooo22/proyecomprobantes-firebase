@@ -264,7 +264,7 @@ service cloud.firestore {
 
 ---
 
-**Última actualización**: $(date)
-**Estado**: Plan aprobado, pendiente de implementación
+**Última actualización**: 04/08/2026
+**Estado**: En implementación — Firebase completo (hosting + auth + firestore + storage, plan Blaze). Pendiente: OCR worker en el server y flujo n8n.
 **Responsable**: Franco
-**Presupuesto**: ~$1 USD/mes (Google Vision OCR)
+**Presupuesto**: ~$0/mes en free tier (Google Vision reemplazado por Tesseract local)

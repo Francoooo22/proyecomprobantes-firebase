@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar — Comprobantes</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="centered" data-page="login">
+  <main class="card login-card">
+    <h1 class="logo">Comprobantes</h1>
+    <p class="subtitle">Ingresá con tu cuenta del grupo</p>
+
+    <form id="login-form">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="usuario@grupo.com">
+
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+
+      <button type="submit" id="btn-login">Ingresar</button>
+    </form>
+
+    <p id="login-error" class="error" hidden></p>
+    <p class="muted">¿Sin cuenta? Pedí tu acceso al supervisor.</p>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

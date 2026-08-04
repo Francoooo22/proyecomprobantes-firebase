@@ -1,0 +1,55 @@
+{
+  "name": "Procesar comprobantes OCR",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "realtime",
+        "serviceAccount": "={{ $credentials.googleFirebaseServiceAccount }}",
+        "watch": "collections",
+        "collections": {
+          "collection": "comprobantes",
+          "watchField": "",
+          "triggerOn": "create"
+        },
+        "simulate": false
+      },
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Nuevo comprobante en Firestore",
+      "type": "n8n-nodes-base.googleFirestoreTrigger",
+      "typeVersion": 1,
+      "position": [220, 300],
+      "webhookId": "comprobantes-firestore-trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5003/procesar",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ doc_id: $json.id }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Llamar OCR worker",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Nuevo comprobante en Firestore": {
+      "main": [
+        [
+          {
+            "node": "Llamar OCR worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

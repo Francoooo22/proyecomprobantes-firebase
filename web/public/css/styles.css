@@ -198,6 +198,7 @@ details summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
   padding: 1rem;
   z-index: 100;
 }
+.modal[hidden] { display: none; }
 .modal-content {
   background: var(--bg-card);
   border: 1px solid var(--border);

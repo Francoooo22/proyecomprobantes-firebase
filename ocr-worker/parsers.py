@@ -142,7 +142,14 @@ def extraer_datos(texto: str) -> dict:
         if campos["alias"]:
             campos["destino"] = campos["alias"]
     elif tipo == "mercado_pago":
-        m = re.search(r"(?:A\s+|DESTINO|BENEFICIARIO)\s*[:.\n]*([A-ZÁÉÍÓÚÑ a-zñáéíóú]{3,40})", texto)
+        # "Para" es la etiqueta real que usa Mercado Pago para el destinatario
+        # (antes solo se buscaba "DESTINO"/"BENEFICIARIO", que no aparecen en
+        # sus comprobantes). "Cuenta destino" la usan otras apps (NaranjaX)
+        # cuando el destino termina siendo una cuenta de Mercado Pago.
+        m = re.search(
+            r"(?:PARA|CUENTA\s+DESTINO|DESTINO|BENEFICIARIO)\s*[:.\n]*([A-ZÁÉÍÓÚÑ a-zñáéíóú]{3,60})",
+            texto, re.IGNORECASE,
+        )
         if m:
             campos["destino"] = m.group(1).strip()
 

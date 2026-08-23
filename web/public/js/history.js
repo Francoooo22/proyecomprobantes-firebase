@@ -24,7 +24,7 @@
         <article class="item">
           <div class="item-main">
             <div class="item-title">
-              ${estadoBadge(d.estado)} ${d.sucursal || '—'} · ${d.tipo || '—'}
+              ${estadoBadge(d.estado)} ${d.sucursal || '—'} · ${d.tipo || '—'} ${d.nro_file ? '· File ' + d.nro_file : ''}
             </div>
             <div class="item-sub muted">
               ${formatFecha(d.fecha_subida)}

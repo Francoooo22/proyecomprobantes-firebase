@@ -19,7 +19,7 @@
     const visibles = docs.filter((d) => {
       if (soloPendientes && d.estado !== 'pendiente' && d.estado !== 'procesado') return false;
       if (q) {
-        const hay = [d.sucursal, d.vendedor_nombre, d.tipo, d.nota]
+        const hay = [d.sucursal, d.vendedor_nombre, d.tipo, d.nro_file, d.nota]
           .concat(d.datos_extraidos ? Object.values(d.datos_extraidos).map(String) : [])
           .join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
@@ -39,7 +39,7 @@
       return `
         <article class="item">
           <div class="item-main">
-            <div class="item-title">${estadoBadge(d.estado)} ${d.sucursal || '—'} · ${d.tipo || '—'}</div>
+            <div class="item-title">${estadoBadge(d.estado)} ${d.sucursal || '—'} · ${d.tipo || '—'} ${d.nro_file ? '· File ' + d.nro_file : ''}</div>
             <div class="item-sub muted">${formatFecha(d.fecha_subida)} · ${d.vendedor_nombre || ''}</div>
             <div class="item-sub">
               ${extra.monto ? 'Monto: <b>' + formatMonto(extra.monto) + '</b>' : ''}
@@ -81,6 +81,7 @@
     modalBody.innerHTML = `
       <h3>${d.sucursal || '—'} · ${d.tipo || '—'} ${estadoBadge(d.estado)}</h3>
       <p class="muted">Subido: ${formatFecha(d.fecha_subida)} · ${d.vendedor_nombre || ''}</p>
+      ${d.nro_file ? `<p><b>N° de File:</b> ${d.nro_file}</p>` : ''}
       ${d.storage_url ? `<a href="${d.storage_url}" target="_blank" class="btn-link">Abrir imagen</a>` : ''}
       ${d.nota ? `<p><b>Nota:</b> ${d.nota}</p>` : ''}
       ${d.datos_extraidos ? `<pre class="pre">${JSON.stringify(d.datos_extraidos, null, 2)}</pre>` : ''}

@@ -61,6 +61,7 @@
             vendedor_nombre: perfil.nombre || perfil.email,
             sucursal: selectSucursal.value,
             tipo: document.getElementById('tipo').value,
+            nro_file: document.getElementById('nro_file').value.trim() || '',
             nota: document.getElementById('nota').value || '',
             storage_path: path,
             storage_url: url,

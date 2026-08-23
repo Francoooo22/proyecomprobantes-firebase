@@ -37,16 +37,20 @@ def _monto(texto: str) -> float | None:
 
 
 def _normalizar_monto(raw: str) -> float | None:
-    """Convierte '1.234,56' / '1.234' / '3.101.600,00' a float.
+    """Convierte '1.234,56' / '1.234' / '3.101.600,00' / '80.000.00' a float.
 
-    Convención argentina: la coma es el separador decimal, el punto siempre
-    es separador de miles (nunca decimal) — así que si no hay coma, cualquier
-    punto se descarta en vez de interpretarse como decimal. Sin esto, un
-    monto como "$142.200" (sin centavos) se leía como $142,20.
+    Convención argentina: la coma es el separador decimal, el punto es
+    separador de miles — salvo que el último grupo separado por "." tenga
+    exactamente 2 dígitos, en cuyo caso son centavos (típico cuando el OCR
+    confunde la coma decimal con un punto, ej. "80.000.00" = $80.000,00,
+    no $8.000.000). Un grupo de miles real siempre tiene 3 dígitos.
     """
     raw = raw.strip()
     if "," in raw:
         raw = raw.replace(".", "").replace(",", ".")
+    elif "." in raw and len(raw.rsplit(".", 1)[1]) == 2:
+        entero, centavos = raw.rsplit(".", 1)
+        raw = entero.replace(".", "") + "." + centavos
     else:
         raw = raw.replace(".", "")
     try:

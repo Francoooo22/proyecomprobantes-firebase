@@ -61,46 +61,41 @@ def leer_paginas(path: str) -> list[np.ndarray]:
 
 # ── Auto-orientación ──────────────────────────────────────────────────────────
 
-def _corregir_orientacion(img: np.ndarray) -> np.ndarray:
-    """Detecta y corrige la orientación de la imagen (0/90/180/270 grados).
+_ROTACIONES_CV2 = {
+    90: cv2.ROTATE_90_CLOCKWISE,
+    180: cv2.ROTATE_180,
+    270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+}
 
-    Profiling de proyección horizontal: para cada rotación candidata suma
-    píxeles por fila y mide la varianza. Mayor varianza = filas de texto
-    horizontales = orientación correcta.
+
+def _detectar_rotacion_osd(img: np.ndarray) -> int | None:
+    """Ángulo (0/90/180/270) que hay que rotar para enderezar el texto, según
+    el OSD (orientation/script detection) de Tesseract.
+
+    A diferencia de una heurística por varianza de proyección de filas, el
+    OSD reconoce la forma de los caracteres — así que sí distingue 0° de
+    180° (una fila de texto boca abajo tiene la misma varianza por fila que
+    al derecho, con lo cual esa heurística podía "corregir" imágenes que ya
+    estaban bien y dejarlas ilegibles). Devuelve None si Tesseract no pudo
+    estimar la orientación (poco texto / imagen muy chica).
     """
-    gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
-    _, binaria = cv2.threshold(gris, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    if not TESSERACT_OK:
+        return None
+    try:
+        osd = pytesseract.image_to_osd(preprocesar(img), output_type=pytesseract.Output.DICT, config="--psm 0")
+        return int(osd.get("rotate", 0)) % 360
+    except Exception:
+        return None
 
-    h, w = binaria.shape[:2]
-    mejor_score = -1.0
-    mejor_angulo = 0
 
-    for angulo in (0, 90, 180, 270):
-        if angulo == 0:
-            rotada = binaria
-        else:
-            center = (w // 2, h // 2)
-            M = cv2.getRotationMatrix2D(center, angulo, 1.0)
-            rotada = cv2.warpAffine(binaria, M, (w, h))
-
-        projection = np.sum(rotada, axis=1).astype(np.float64)
-        score = float(np.var(projection))
-
-        if score > mejor_score:
-            mejor_score = score
-            mejor_angulo = angulo
-
-    if mejor_angulo == 0:
+def _corregir_orientacion(img: np.ndarray) -> np.ndarray:
+    """Detecta y corrige la orientación de la imagen (0/90/180/270 grados)."""
+    angulo = _detectar_rotacion_osd(img)
+    if not angulo:
         return img
 
-    logger.info("Orientación detectada: %s° — corrigiendo", mejor_angulo)
-    center = (img.shape[1] // 2, img.shape[0] // 2)
-    M = cv2.getRotationMatrix2D(center, mejor_angulo, 1.0)
-    return cv2.warpAffine(
-        img, M, (img.shape[1], img.shape[0]),
-        flags=cv2.INTER_CUBIC,
-        borderMode=cv2.BORDER_REPLICATE,
-    )
+    logger.info("Orientación detectada: %s° — corrigiendo", angulo)
+    return cv2.rotate(img, _ROTACIONES_CV2[angulo])
 
 
 # ── Preprocesamiento para OCR ─────────────────────────────────────────────────

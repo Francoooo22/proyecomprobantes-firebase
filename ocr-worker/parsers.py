@@ -16,14 +16,18 @@ def _limpiar(texto: str) -> str:
 
 
 def _monto(texto: str) -> float | None:
-    """Busca el primer monto en pesos en el texto. Tolerante a puntos y comas."""
-    # $ 1.234,56 | $1234,56 | ARS 1.234,56 | 1.234,56
+    """Busca el monto en pesos en el texto. Tolerante a puntos y comas.
+
+    Los patrones con etiqueta (IMPORTE/TOTAL/MONTO) van primero porque son
+    inequívocos; un "$" suelto puede aparecer antes en un número de cuenta
+    o de referencia (ej. "CC $ 0237-035286/0") y no es el importe real.
+    """
     patrones = [
-        r"\$\s*([\d.]+(?:[.,]\d{2})?)",
-        r"ARS\s*([\d.]+(?:[.,]\d{2})?)",
         r"IMPORTE\s*[:]?\s*\$?\s*([\d.]+(?:[.,]\d{2})?)",
         r"TOTAL\s*[:]?\s*\$?\s*([\d.]+(?:[.,]\d{2})?)",
         r"MONTO\s*[:]?\s*\$?\s*([\d.]+(?:[.,]\d{2})?)",
+        r"\$\s*([\d.]+(?:[.,]\d{2})?)",
+        r"ARS\s*([\d.]+(?:[.,]\d{2})?)",
     ]
     for pat in patrones:
         m = re.search(pat, texto, re.IGNORECASE)
@@ -33,12 +37,18 @@ def _monto(texto: str) -> float | None:
 
 
 def _normalizar_monto(raw: str) -> float | None:
-    """Convierte '1.234,56' o '1234.56' o '1.234' a float."""
+    """Convierte '1.234,56' / '1.234' / '3.101.600,00' a float.
+
+    Convención argentina: la coma es el separador decimal, el punto siempre
+    es separador de miles (nunca decimal) — así que si no hay coma, cualquier
+    punto se descarta en vez de interpretarse como decimal. Sin esto, un
+    monto como "$142.200" (sin centavos) se leía como $142,20.
+    """
     raw = raw.strip()
-    if "," in raw and "." in raw:
+    if "," in raw:
         raw = raw.replace(".", "").replace(",", ".")
-    elif "," in raw:
-        raw = raw.replace(",", ".")
+    else:
+        raw = raw.replace(".", "")
     try:
         return round(float(raw), 2)
     except ValueError:

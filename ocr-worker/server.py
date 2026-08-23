@@ -126,5 +126,12 @@ def health():
     return jsonify({"ok": True, "tesseract": ocr_engine.TESSERACT_OK})
 
 
+@app.get("/")
+def raiz():
+    # Endpoint sin datos, solo para que monitor-services.sh (que pega a "/"
+    # en todos los servicios) pueda confirmar que el proceso responde.
+    return jsonify({"servicio": "comprobantes-ocr-worker"})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("OCR_PORT", 5003)), debug=False)

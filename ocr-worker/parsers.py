@@ -1,8 +1,9 @@
 """
 Parsers de comprobantes bancarios por patrón (regex) sobre el texto del OCR.
 
-Detecta el tipo de comprobante (BNA, MODO, Mercado Pago) y extrae los campos
-relevantes: monto, fecha, origen, destino, CBU/alias, CUIT, número de operación.
+Detecta el tipo de comprobante (BNA, MODO, Mercado Pago) y extrae monto, fecha,
+número de operación, y los datos de emisor/receptor por separado (nombre, CUIT,
+cuenta/CBU/alias de cada lado).
 
 Los valores vienen de OCR, así que el matching es tolerante a ruido.
 """
@@ -94,6 +95,91 @@ def _nro_operacion(texto: str) -> str | None:
     return m.group(1) if m else None
 
 
+# ── Emisor / receptor ─────────────────────────────────────────────────────────
+# Bank-agnóstico: en vez de un regex de "destino" por banco, se busca dónde
+# empiezan los datos de cada lado (emisor = quien manda la plata, receptor =
+# quien la recibe) y se extrae nombre/CUIT/cuenta de cada tramo por separado.
+# Necesario porque hoy el CUIT/CBU "único" del parser viejo era en realidad
+# siempre el del emisor (el bloque "De" aparece antes que "Para" en el texto),
+# y a futuro pueden recibir plata en más de una cuenta propia.
+
+# "De"/"Para" cuentan como etiqueta real solo si son (casi) todo el contenido
+# de su línea — así no se confunden con la preposición normal ("Comprobante
+# de transferencia", en cualquier parte del texto) ni con un "De" que es
+# parte de un apellido ("Alejandro De Benedectis"): ninguna de las dos
+# aparece sola en su línea, a diferencia de la etiqueta real del comprobante
+# ("De:", "* De", "e Para").
+_ETIQUETA_EMISOR = re.compile(
+    r"(?i:DATOS\s+ORDENANTE|CUENTA\s+ORIGEN)|^.{0,3}?\bDE\b\s*:?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_ETIQUETA_RECEPTOR = re.compile(
+    r"(?i:DATOS\s+BENEFICIARIO|TITULAR\s+CUENTA\s+DESTINO|CUENTA\s+DESTINO|DESTINATARIO|BENEFICIARIO)"
+    r"|^.{0,3}?\bPARA\b\s*:?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+# Etiquetas que preceden directamente al nombre de una persona/empresa dentro
+# de un bloque ya recortado (más específicas que las de arriba: evitan capturar
+# "n° de referencia" como si fuera el nombre).
+_ETIQUETA_NOMBRE = re.compile(
+    r"(?i:TITULAR\s+CUENTA\s+DESTINO|TITULARIDAD|APELLIDO\s+Y\s+NOMBRE|CUENTA\s+ORIGEN|CUENTA\s+DESTINO"
+    r"|DESTINATARIO|BENEFICIARIO)|^.{0,3}?\bDE\b\s*:?\s*$|^.{0,3}?\bPARA\b\s*:?\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _bloques_emisor_receptor(texto: str) -> tuple[str, str]:
+    """Recorta el texto en el tramo de datos del emisor y el del receptor.
+
+    Cada tramo va desde su etiqueta hasta que empieza la del otro lado (o
+    hasta el final del texto). Si no se encuentra una etiqueta, ese tramo
+    queda vacío en vez de adivinar.
+    """
+    m_emisor = _ETIQUETA_EMISOR.search(texto)
+    m_receptor = _ETIQUETA_RECEPTOR.search(texto)
+    inicio_emisor = m_emisor.start() if m_emisor else None
+    inicio_receptor = m_receptor.start() if m_receptor else None
+
+    if inicio_emisor is not None and inicio_receptor is not None:
+        if inicio_emisor < inicio_receptor:
+            return texto[inicio_emisor:inicio_receptor], texto[inicio_receptor:]
+        return texto[inicio_emisor:], texto[inicio_receptor:inicio_emisor]
+    if inicio_emisor is not None:
+        return texto[inicio_emisor:], ""
+    if inicio_receptor is not None:
+        return "", texto[inicio_receptor:]
+    return "", ""
+
+
+def _nombre_de_bloque(bloque: str) -> str | None:
+    # [\s:.]* (no "\s*[:.\n]*") porque el separador entre etiqueta y nombre
+    # puede ser "\n" pegado (De:\nJuan) o ": " con espacio (Titularidad: LAUKE) —
+    # con \s* primero y [:.\n]* después, el espacio tras los dos puntos
+    # quedaba sin consumir y la captura fallaba entera.
+    # El grupo opcional de "Apellido y Nombre" salta ese sub-encabezado cuando
+    # aparece entre la etiqueta y el valor real (formato de la app del BNA).
+    m = re.search(
+        r"(?:" + _ETIQUETA_NOMBRE.pattern + r")[\s:.]*(?:APELLIDO\s+Y\s+NOMBRE[\s:.]*)?"
+        r"([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ a-zñáéíóú]{2,59})",
+        bloque,
+        re.IGNORECASE | re.MULTILINE,
+    )
+    return m.group(1).strip() if m else None
+
+
+def _cuenta_de_bloque(bloque: str) -> str | None:
+    """CBU/CVU (22 dígitos) si hay; si no, alias; si no, un número de cuenta
+    genérico tipo "4039028-3" (formato que usan los bancos para CA/CC)."""
+    cbu = _cbu(bloque)
+    if cbu:
+        return cbu
+    alias = _alias(bloque)
+    if alias:
+        return alias
+    m = re.search(r"\b(\d[\d/\-]{4,20}\d)\b", bloque)
+    return m.group(1) if m else None
+
+
 # ── Detección de tipo ─────────────────────────────────────────────────────────
 
 def detectar_tipo(texto: str) -> str:
@@ -120,38 +206,20 @@ def extraer_datos(texto: str) -> dict:
         "tipo": tipo,
         "monto": _monto(texto_limpio),
         "fecha": _fecha(texto_limpio),
-        "cuit": _cuit(texto_limpio),
-        "cbu": _cbu(texto_limpio),
-        "alias": _alias(texto_limpio),
         "nro_operacion": _nro_operacion(texto_limpio),
     }
 
-    # Origen / destino según el tipo
-    if tipo == "bna":
-        campos["origen"] = "BANCO DE LA NACION ARGENTINA"
-        m = re.search(r"(?:DESTINO|BENEFICIARIO|A FAVOR DE)\s*[:.\n]*([A-ZÁÉÍÓÚÑ a-zñáéíóú]{3,40})", texto)
-        if m:
-            campos["destino"] = m.group(1).strip()
-        m2 = re.search(r"CUENTA DESTINO\s*[:.\n]*([\d/]+)", texto)
-        if m2:
-            campos["cuenta_destino"] = m2.group(1).strip()
-    elif tipo == "modo":
-        m = re.search(r"(?:A\s+|ALIAS\s+|DESTINO|ENVIADO A)\s*[:.\n]*([A-Za-z0-9_.\-]{3,40})", texto)
-        if m:
-            campos["destino"] = m.group(1).strip()
-        if campos["alias"]:
-            campos["destino"] = campos["alias"]
-    elif tipo == "mercado_pago":
-        # "Para" es la etiqueta real que usa Mercado Pago para el destinatario
-        # (antes solo se buscaba "DESTINO"/"BENEFICIARIO", que no aparecen en
-        # sus comprobantes). "Cuenta destino" la usan otras apps (NaranjaX)
-        # cuando el destino termina siendo una cuenta de Mercado Pago.
-        m = re.search(
-            r"(?:PARA|CUENTA\s+DESTINO|DESTINO|BENEFICIARIO)\s*[:.\n]*([A-ZÁÉÍÓÚÑ a-zñáéíóú]{3,60})",
-            texto, re.IGNORECASE,
-        )
-        if m:
-            campos["destino"] = m.group(1).strip()
+    # Emisor (quién manda la plata) y receptor (quién la recibe), cada uno con
+    # su propio nombre/CUIT/cuenta — no un solo CUIT/CBU ambiguo como antes.
+    bloque_emisor, bloque_receptor = _bloques_emisor_receptor(texto)
+    if bloque_emisor:
+        campos["emisor_nombre"] = _nombre_de_bloque(bloque_emisor)
+        campos["emisor_cuit"] = _cuit(bloque_emisor)
+        campos["emisor_cuenta"] = _cuenta_de_bloque(bloque_emisor)
+    if bloque_receptor:
+        campos["receptor_nombre"] = _nombre_de_bloque(bloque_receptor)
+        campos["receptor_cuit"] = _cuit(bloque_receptor)
+        campos["receptor_cuenta"] = _cuenta_de_bloque(bloque_receptor)
 
     # Quitar campos vacíos
     return {k: v for k, v in campos.items() if v not in (None, "", {})}

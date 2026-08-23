@@ -43,10 +43,10 @@
             <div class="item-sub muted">${formatFecha(d.fecha_subida)} · ${d.vendedor_nombre || ''}</div>
             <div class="item-sub">
               ${extra.monto ? 'Monto: <b>' + formatMonto(extra.monto) + '</b>' : ''}
-              ${extra.cuit ? ' · CUIT: <b>' + extra.cuit + '</b>' : ''}
               ${extra.fecha ? ' · Fecha: <b>' + extra.fecha + '</b>' : ''}
-              ${extra.origen ? ' · De: <b>' + extra.origen + '</b>' : ''}
-              ${extra.destino ? ' · Para: <b>' + extra.destino + '</b>' : ''}
+              ${extra.emisor_nombre ? ' · De: <b>' + extra.emisor_nombre + '</b>' : ''}
+              ${extra.receptor_nombre ? ' · Para: <b>' + extra.receptor_nombre + '</b>' : ''}
+              ${extra.receptor_cuenta ? ' · Cuenta receptora: <b>' + extra.receptor_cuenta + '</b>' : ''}
             </div>
           </div>
           <div class="item-actions">

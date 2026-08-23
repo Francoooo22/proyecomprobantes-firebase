@@ -33,7 +33,7 @@
             <div class="item-sub">
               ${extra.monto ? 'Monto: <b>' + formatMonto(extra.monto) + '</b>' : ''}
               ${extra.fecha ? ' · Fecha: <b>' + extra.fecha + '</b>' : ''}
-              ${extra.origen ? ' · De: <b>' + extra.origen + '</b>' : ''}
+              ${extra.emisor_nombre ? ' · De: <b>' + extra.emisor_nombre + '</b>' : ''}
               ${d.nota ? '<div class="muted">' + d.nota + '</div>' : ''}
             </div>
           </div>

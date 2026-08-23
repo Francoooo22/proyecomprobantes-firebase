@@ -62,6 +62,35 @@ misma tanda:
 correcto donde el texto lo contiene (antes: 3 ilegibles + 2 montos mal calculados por
 3-4 órdenes de magnitud).
 
+### Emisor y receptor separados (`070d547`)
+
+El usuario pidió capturar **nombre + cuenta del emisor Y del receptor por separado**
+(no solo un CUIT/CBU ambiguo) porque a futuro pueden recibir plata en distintas cuentas
+propias. Se reemplazaron los campos viejos `tipo`-específicos (`destino`/`origen`/
+`cuenta_destino` de BNA/MODO/Mercado Pago) por una extracción bank-agnóstica:
+`emisor_nombre`/`emisor_cuit`/`emisor_cuenta` y `receptor_nombre`/`receptor_cuit`/
+`receptor_cuenta`. Busca dónde empiezan los datos de cada lado (etiquetas "De"/"Para"/
+"Cuenta origen"/"Datos Ordenante"/"Datos Beneficiario"/etc.) y saca nombre+CUIT+cuenta
+de cada tramo.
+
+Dos bugs de regex encontrados en el camino (probando otra vez contra los mismos 12
+comprobantes):
+- Matchear "De"/"Para" sin exigir que fueran casi todo el contenido de su línea hacía
+  que `"Comprobante de transferencia"` (preposición normal) o un apellido como
+  `"Alejandro De Benedectis"` se confundieran con la etiqueta real del comprobante.
+- El separador etiqueta→nombre (`\s*[:.\n]*`) no contemplaba "dos puntos + espacio"
+  (ej. `"Titularidad: LAUKE SRL"`), solo funcionaba si el salto de línea venía pegado
+  al `:`. Con `[\s:.]*` se arregló.
+
+**Resultado:** 8 de 12 comprobantes con emisor Y receptor completos (antes: el campo
+"emisor" no existía como tal, y "destino" nunca traía el remitente). Quedan débiles:
+el que no tiene etiquetas "De"/"Para" explícitas (`122225`), el de tabla mezclada por
+OCR (`122325`), y el de UI muy cargada de íconos (`122347`) — documentado como límite
+conocido, no vale la pena seguir parchando casos cada vez más específicos con regex.
+
+Frontend (`admin.js`/`history.js`) actualizado para mostrar `emisor_nombre`/
+`receptor_nombre`/`receptor_cuenta` en vez de los campos viejos.
+
 ### Setup de este entorno (WSL, esta PC)
 - Tesseract 5.3.4 + `tesseract-ocr-spa` + `libzbar0` instalados (requería sudo).
 - `ocr-worker/.venv` con las deps de `requirements.txt` instaladas, para poder probar
@@ -69,14 +98,13 @@ correcto donde el texto lo contiene (antes: 3 ilegibles + 2 montos mal calculado
 - Service account guardado en `~/.firebase-keys/proyecomprobantes-sa.json`.
 
 ### Pendiente
-- **Confirmar criterio de CUIT/CBU**: hoy el parser captura los datos del *remitente*
-  (quien paga), no del destinatario, porque toma la primera coincidencia en el texto y
-  en estos recibos el bloque "De" aparece antes que "Para". Falta decidir si eso es lo
-  que se quiere para conciliación.
-- Cosmético menor: en comprobantes con etiqueta "Cuenta destino" (NaranjaX), queda un
-  ícono mal-OCR'eado como letra suelta al principio del nombre destino (ej. `"S Cristian..."`).
+- Cosmético menor: en comprobantes con etiqueta "Cuenta destino"/"Cuenta origen"
+  (NaranjaX), queda un ícono mal-OCR'eado como letra suelta al principio del nombre
+  (ej. `"S Cristian..."`, `"NX Gustavo..."`).
 - Correr `ocr-worker/server.py` en el server (todavía no está desplegado ahí).
 - Activar el workflow de n8n (`n8n/workflow-procesar-comprobantes.json`).
 - Dar de alta a los vendedores reales de las 4 empresas.
 - Implementar la conciliación bancaria (matching por monto ±0.3%, últimos 4 dígitos,
-  fecha+CUIT, many-to-one) — ver "Próximo paso propuesto" en el README.
+  fecha+CUIT, many-to-one) — ver "Próximo paso propuesto" en el README. Ahora que hay
+  `receptor_cuenta` explícito, el matching puede filtrar por cuál cuenta propia recibió
+  cada pago.

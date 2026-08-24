@@ -158,8 +158,12 @@ def _nombre_de_bloque(bloque: str) -> str | None:
     # quedaba sin consumir y la captura fallaba entera.
     # El grupo opcional de "Apellido y Nombre" salta ese sub-encabezado cuando
     # aparece entre la etiqueta y el valor real (formato de la app del BNA).
+    # El grupo opcional siguiente salta un ícono mal-OCR'eado como letra suelta
+    # (1-2 mayúsculas + espacio, ej. "S Cristian...", "NX Gustavo...") que
+    # NaranjaX deja pegado antes del nombre en "Cuenta destino"/"Cuenta origen".
     m = re.search(
         r"(?:" + _ETIQUETA_NOMBRE.pattern + r")[\s:.]*(?:APELLIDO\s+Y\s+NOMBRE[\s:.]*)?"
+        r"(?:[A-ZÑ]{1,2}\s+(?=[A-ZÁÉÍÓÚÑ]))?"
         r"([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ a-zñáéíóú]{2,59})",
         bloque,
         re.IGNORECASE | re.MULTILINE,

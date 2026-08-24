@@ -5,6 +5,9 @@ const SUCURSALES = [
   'Aramendi',
   'Wolf',
   'Family Group',
+  'HyT',
+  'Alce',
+  'Limite Vertical',
 ];
 
 const ESTADOS = {
